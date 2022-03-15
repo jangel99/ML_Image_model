@@ -134,3 +134,43 @@ def upscale(filters, apply_dropout = True):
   return result
 
   upscale(64)
+  
+  def Generator():
+  inputs = tf.keras.layers.Input(shape=[None,None,3])
+
+  down_stack = [
+    decomposer(64, apply_batchnorm=False), 
+    decomposer(128),
+    decomposer(256),
+    decomposer(512),
+    decomposer(512),
+    decomposer(512),
+    decomposer(512),
+    decomposer(512),
+  ]
+
+  up_stack = [
+    upscale(512, apply_dropout=True),
+    upscale(512, apply_dropout=True),
+    upscale(512, apply_dropout=True),
+    upscale(512),
+    upscale(256),
+    upscale(128),
+    upscale(64),
+  ]
+
+  last = Conv2DTranspose(filters = 3,
+                         kernel_size = 4,
+                         strides = 2,
+                         padding = "same",
+                         kernel_initializer = initializer,
+                         activation = "tanh")
+  x = inputs
+
+  for down in down_stack:
+    x = down(x)
+
+  for up in up_stack:
+    x = up(x)
+
+  return last(x)
