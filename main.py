@@ -111,3 +111,21 @@ def decomposer(filters):
   return result
 
 decomposer(64)
+
+def upscale(filters, apply_dropout = True):
+  reult = Sequential()
+
+  initializer = tf.random_normal_initializer(0, 0.02)
+
+  result.add(Conv2D(filters,
+                    kernel_size=4,
+                    strides=2,
+                    padding="same",
+                    kernel_initializer=initializer,
+                    use_bias=not apply_batchnorm))
+  if apply_batchnorm:
+    result.add(BatchNormalization())
+
+  result.add(leakyRelu())
+
+  return result
