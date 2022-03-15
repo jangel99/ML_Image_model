@@ -129,7 +129,7 @@ def upscale(filters, apply_dropout = True):
   if apply_dropout:
     result.add(Dropout(0.5))
 
-  result.add(leakyRelu())
+  result.add(Relu())
 
   return result
 
