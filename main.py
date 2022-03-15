@@ -122,10 +122,15 @@ def upscale(filters, apply_dropout = True):
                     strides=2,
                     padding="same",
                     kernel_initializer=initializer,
-                    use_bias=not apply_batchnorm))
-  if apply_batchnorm:
-    result.add(BatchNormalization())
+                    use_bias=False))
+
+  result.add(BatchNormalization())
+
+  if apply_dropout:
+    result.add(Dropout(0.5))
 
   result.add(leakyRelu())
 
   return result
+
+  upscale(64)
