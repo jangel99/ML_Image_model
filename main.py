@@ -135,7 +135,7 @@ def upscale(filters, apply_dropout = True):
 
   upscale(64)
   
-  def Generator():
+def Generator():
   inputs = tf.keras.layers.Input(shape=[None,None,3])
 
   down_stack = [
@@ -159,6 +159,8 @@ def upscale(filters, apply_dropout = True):
     upscale(64),
   ]
 
+  initializer = tf.random_normal_initializer(0, 0.2)
+
   last = Conv2DTranspose(filters = 3,
                          kernel_size = 4,
                          strides = 2,
@@ -166,11 +168,123 @@ def upscale(filters, apply_dropout = True):
                          kernel_initializer = initializer,
                          activation = "tanh")
   x = inputs
+  s = []
+
+  concat = Concatenate()
 
   for down in down_stack:
     x = down(x)
+    s = s.append(x)
+  
+  s =  reversed(s[:-1])
 
   for up in up_stack:
     x = up(x)
+    x = concat([x, sk])
+
+  last = last(x)
 
   return last(x)
+
+generator = Generator()
+gen_output = generator(((inimg+1)*255), training = False)
+plt.imshow(gen_output[0,...])
+
+
+def Discriminator():
+  ini = Input(shape=[None, None, 3], name="input_img")
+  gen = Input(shape=[None, None, 3], name="gener_img")
+
+  con = concatenate([ini, gen])
+
+  initializer = tf.random_normal_initializer(0, 0.2)
+ 
+  down1 = decomposer(64, apply_batchnorm=False)(con)
+  down2 = decomposer(128)
+  down3 = decomposer(256)
+  down4 = decomposer(512)
+
+  last = tf.keras.layers.Conv2D(filters=1,
+                                kernle_size=4,
+                                strides=1,
+                                kernel_initializer=initializer,
+                                padding="same")(down4)
+
+  return tf.keras.Model(inputs=[ini, gen], outputs=last)
+
+discriminator = Discriminator()
+
+disc_out = discriminator()
+
+def discriminator_loss(disc_real_output, disc_generated_output):
+
+  real_loss = loss_object(tf.ones_like(disc_real_output), disc_real_output)
+
+  generated_loss = loss_object(tf.zeros_like(disc_generated_output), disc_generated_output)
+
+  total_disc_loss = real_loss + generated_loss
+  
+  import os
+
+generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+
+checkpoint_prefix = os.path.join(CKPATH, "ckpt")
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
+                                 discriminator_optimizer = discriminator_optimizer,
+                                 generator=generator,
+                                 disciminator=discriminator)
+def generate_images(model, test_input, tar, save_filename=False, display_imgs=True):
+  prediction = model(test_input, training=True)
+  if save_filename:
+    tf.keras.preprocessing.image.save_img(PATH + 'output/' + save:filename + '.jpg', prediction[0,...])
+
+  plt.figure(figsize=(10,10))
+
+  display_list = [test_input[0], tar[0], prediction[0]]
+  title = ['Input Image', 'Ground Truth', 'Predicted Image']
+
+  if display_imgs:
+    for i in range(3):
+      plt.subplot(1, 3, i+1)
+      plt.title(title[i])
+      plt.imshow(display_list[i] * 0.5 + 0.5)
+      plt.axis('off')
+      
+  plt.show()
+  
+  def train_step(input_image, terget):
+
+  with GradientTape() as gen_tape, GradientTape() as discr_tape:
+    ouput_image = generator(input_image, training=True)
+
+    output_gen_discr = discriminator([ouptut_image, input_image], training=True)
+
+    output_trg_discr = discriminator([target, input_image], training=True)
+
+    discr_loss = descriminator_loss()
+
+    generator_grads = gen_tape.gradients(gen_loss, generator.trainable_variables)
+
+    discriminator_grads = discr_tape.gradients(discr_loss, discriminator.trainable_variables)
+
+    generator_optimizer.apply_gradients()
+    
+    from IPython.display import clear.output
+
+def train(dataset, epochs):
+  for epoch in range(epochs):
+
+    imgi = 0
+    for input_image, target in dataset:
+      print('epoch ' + str(epoch) + ' - train' + str(imgi)+'/'+str(len(tr_urls)))
+      imgi+=1
+      train_step(input_image, target)
+
+    clear_output(wait=True)
+
+    for inp, tar in test:dataset.take(5):
+      generate_images(generator, inp, tar, str(imgi) + '_' + str(epoch, display_imgs=True))
+
+    if (epoch + 1) %25==0:
+      checkpoint.save(file_prefix = checkpoint_prefix)
